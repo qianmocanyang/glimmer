@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>曦语 · 桌面歌词</title>
+<style>
+  /* 桌面歌词悬浮窗：透明背景，文字带阴影描边，任何壁纸上都清晰可见 */
+  html, body {
+    margin: 0; padding: 0; overflow: hidden;
+    width: 100%; height: 100%;
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+  body {
+    position: relative;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    user-select: none; -webkit-user-select: none;
+    background-color: transparent;
+  }
+
+  /* ===== 时钟模式（未播报时显示） ===== */
+  #clockView {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px;
+    opacity: 0; transition: opacity .45s ease;
+  }
+  #clockView.on { opacity: 1; }
+  #clockTime {
+    font-size: 60px; font-weight: 700; letter-spacing: 4px;
+    background: linear-gradient(180deg, #ffedbd 0%, #ffd98a 48%, #f2a44c 100%);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.65)) drop-shadow(0 0 16px rgba(255,190,90,.4));
+    animation: clockGlow 3.2s ease-in-out infinite;
+    font-variant-numeric: tabular-nums;
+  }
+  @keyframes clockGlow {
+    0%, 100% { filter: drop-shadow(0 2px 3px rgba(0,0,0,.65)) drop-shadow(0 0 12px rgba(255,190,90,.32)); }
+    50%      { filter: drop-shadow(0 2px 3px rgba(0,0,0,.65)) drop-shadow(0 0 22px rgba(255,200,110,.6)); }
+  }
+  #clockDate {
+    font-size: 16px; color: #fff;
+    text-shadow: 0 1px 8px rgba(0,0,0,.85);
+    opacity: .92; letter-spacing: 3px;
+  }
+
+  /* ===== 歌词模式（播报时显示） ===== */
+  #lyricView {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    opacity: 0; transition: opacity .45s ease;
+  }
+  #lyricView.on { opacity: 1; }
+
+  /* 毛玻璃感歌词卡片（透明窗口无法用 backdrop-filter，用半透明深琥珀模拟） */
+  #lyricCard {
+    position: relative;
+    max-width: 94%;
+    padding: 16px 38px 14px;
+    text-align: center;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(34,23,13,.66) 0%, rgba(22,15,9,.72) 100%);
+    border: 1px solid rgba(255,217,138,.30);
+    box-shadow: 0 12px 36px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.10);
+    animation: cardIn .5s cubic-bezier(.2,.9,.3,1.2);
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: scale(.9) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  #lyricTag {
+    display: flex; align-items: center; justify-content: center;
+    gap: 7px;
+    font-size: 11px; letter-spacing: 5px;
+    color: rgba(255,255,255,.6);
+    margin-bottom: 4px;
+    text-shadow: 0 1px 4px rgba(0,0,0,.8);
+    font-family: Consolas, monospace;
+  }
+  #lyricTag i {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #ff5f56;
+    box-shadow: 0 0 8px rgba(255,95,86,.95);
+    animation: liveDot 1.2s ease-in-out infinite;
+  }
+  @keyframes liveDot { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  #lyricCur {
+    font-size: 31px; font-weight: 600; line-height: 1.35;
+    background: linear-gradient(180deg, #fff6e0 0%, #ffe0a3 55%, #ffc36e 100%);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)) drop-shadow(0 0 14px rgba(255,190,90,.3));
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  #lyricCur.swap { opacity: 0; transform: translateY(8px); }
+
+  #lyricNext {
+    margin-top: 6px;
+    font-size: 17px; line-height: 1.4;
+    color: rgba(255,255,255,.55);
+    max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    text-shadow: 0 1px 6px rgba(0,0,0,.8);
+  }
+</style>
+</head>
+<body>
+
+  <!-- 时钟模式 -->
+  <div id="clockView">
+    <div id="clockTime">--:--:--</div>
+    <div id="clockDate"></div>
+  </div>
+
+  <!-- 歌词模式 -->
+  <div id="lyricView">
+    <div id="lyricCard">
+      <div id="lyricTag"><i></i>ON AIR</div>
+      <div id="lyricCur"></div>
+      <div id="lyricNext"></div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  var clockView = document.getElementById('clockView');
+  var lyricView = document.getElementById('lyricView');
+  var clockTime = document.getElementById('clockTime');
+  var clockDate = document.getElementById('clockDate');
+  var lyricCur = document.getElementById('lyricCur');
+  var lyricNext = document.getElementById('lyricNext');
+
+  var segTimer = null;   // 逐句切换定时器
+  var segs = [];         // 句子数组
+  var segIdx = -1;
+
+  /* ---------- 时钟 ---------- */
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function tickClock() {
+    var now = new Date();
+    var WEEK = '日一二三四五六';
+    clockTime.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+    clockDate.textContent = (now.getMonth() + 1) + '月' + now.getDate() + '日 · 星期' + WEEK[now.getDay()];
+  }
+  setInterval(tickClock, 1000);
+
+  function showClockMode() {
+    if (segTimer) { clearTimeout(segTimer); segTimer = null; }
+    segs = []; segIdx = -1;
+    lyricView.classList.remove('on');
+    clockView.classList.add('on');
+    tickClock();
+  }
+
+  /* ---------- 歌词逐句显示（与主窗口字幕同算法：按字数占比 × 语音时长 × 0.95） ---------- */
+  function showLyric(text, duration) {
+    if (!text) { showClockMode(); return; }
+    clockView.classList.remove('on');
+    lyricView.classList.add('on');
+
+    if (segTimer) { clearTimeout(segTimer); segTimer = null; }
+    segs = String(text).split(/(?<=[。！？!?；;…])/).map(function (s) { return s.trim(); }).filter(Boolean);
+    segIdx = -1;
+    var total = String(text).length;
+
+    function showNext() {
+      segIdx++;
+      if (segIdx >= segs.length) { showClockMode(); return; }
+      var t = segs[segIdx];
+
+      lyricCur.classList.add('swap');
+      setTimeout(function () {
+        lyricCur.textContent = t;
+        lyricCur.classList.remove('swap');
+      }, 180);
+
+      lyricNext.textContent = segs[segIdx + 1] || '';
+
+      var ms = duration ? (t.length / total) * duration * 1000 * 0.95 : 1100;
+      segTimer = setTimeout(showNext, ms);
+    }
+    showNext();
+  }
+
+  /* ---------- 主进程推送（经 preload） ---------- */
+  window.radioDesktop.onLyric(function (payload) {
+    if (!payload) return;
+    if (payload.mode === 'caption') {
+      showLyric(payload.text, payload.duration || 0);
+    } else {
+      showClockMode();
+    }
+  });
+
+  showClockMode();
+})();
+</script>
+</body>
+</html>

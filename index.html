@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#1a120b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="曦语">
+<link rel="manifest" href="./manifest.webmanifest">
+<title>曦语 · Glimmer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📻</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="radio">
+
+  <!-- 顶部字幕横幅(播报时显示,逐段浮现) -->
+  <div id="captionBar" class="caption-bar" hidden>
+    <span class="caption-tag"><i></i>ON AIR</span>
+    <div id="captionLines" class="caption-lines"></div>
+  </div>
+
+  <!-- 顶部：品牌 + 时钟 -->
+  <header class="radio__header">
+    <div class="brand">
+      <span class="brand__dot"></span>
+      <h1>曦语<small>GLIMMER</small></h1>
+    </div>
+    <div class="clock">
+      <span id="clockTime" class="clock__time">--:--:--</span>
+      <span id="clockDate" class="clock__date"></span>
+    </div>
+  </header>
+
+  <!-- 调谐盘 -->
+  <section class="dial" aria-label="电台调谐盘">
+    <div class="dial__track">
+      <div class="dial__scale"></div>
+      <div class="dial__needle" id="dialNeedle"></div>
+    </div>
+    <div class="dial__readout">
+      <span id="dialFreq" class="dial__freq">FM 104.5</span>
+      <span id="dialStatus" class="dial__status">待机 STANDBY</span>
+    </div>
+  </section>
+
+  <!-- 喇叭区：均衡器 + 喇叭网 -->
+  <section class="speaker">
+    <div class="eq" id="eq" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="speaker__grille"></div>
+  </section>
+
+  <!-- 字幕区 -->
+  <section class="stage">
+    <p id="subtitle" class="stage__subtitle">设定闹钟时间，到点后电台会为你送上 AI 激励语 ☀</p>
+    <p id="stageState" class="stage__state"></p>
+  </section>
+
+  <!-- 控制区 -->
+  <section class="controls">
+    <div class="alarm-box">
+      <div class="row">
+        <label class="switch" title="闹钟开关">
+          <input type="checkbox" id="alarmToggle">
+          <span class="switch__track"></span>
+        </label>
+        <span class="alarm-box__title">定时播报</span>
+        <span id="nextFire" class="meta">闹钟未开启</span>
+      </div>
+      <div id="alarmTimes" class="alarm-times" title="定时时间列表（点击 × 删除）"></div>
+      <div class="alarm-add">
+        <input type="time" id="alarmTime" class="time-picker" value="07:30">
+        <button id="addTimeBtn" class="btn" type="button">+ 添加定时</button>
+      </div>
+    </div>
+    <div class="row row--actions">
+      <button id="previewBtn" class="btn btn--primary" type="button">▶ 试听</button>
+      <button id="stopBtn" class="btn" type="button">■ 停止</button>
+      <button id="settingsBtn" class="btn btn--ghost" type="button">⚙ 设置</button>
+    </div>
+  </section>
+
+  <!-- 设置面板 -->
+  <section class="panel" id="panel" hidden>
+    <h2>电台设置</h2>
+
+    <fieldset>
+      <legend>你的称呼（可选）</legend>
+      <input type="text" id="userName" placeholder="如：谭雅（播报开头会叫你的名字）" maxlength="20">
+    </fieldset>
+
+    <fieldset>
+      <div class="emotions" id="emotions"></div>
+    </fieldset>
+
+    <fieldset>
+      <select id="voiceSelect"></select>
+      <button id="voiceTestBtn" class="btn" type="button">🔊 试听当前音色</button>
+      <p class="voice-info">情绪随模式变化：活力清晨 / 温柔鼓励 / 激昂唤醒</p>
+    </fieldset>
+
+    <fieldset id="bootSection" hidden>
+      <label class="chk">
+        <input type="checkbox" id="launchOnBoot">
+        开机自启动（开机后约 1 分钟自动开始播放）
+      </label>
+    </fieldset>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/voices.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/tts.js"></script>
+<script src="js/sounds.js"></script>
+<script src="js/minimaxTts.js"></script>
+<script src="js/alarm.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

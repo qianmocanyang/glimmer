@@ -1,0 +1,15 @@
+# 依赖
+node_modules/
+
+# 打包产物
+desktop/release/
+
+# 日志
+*.log
+
+# WorkBuddy 本地数据（含 API Key 备份，禁止上传）
+.workbuddy/
+
+# 系统文件
+.DS_Store
+Thumbs.db

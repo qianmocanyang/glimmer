@@ -1,0 +1,343 @@
+/* ============================================================
+ * style.css — 晨间电台（复古暖色电台风格）
+ * ============================================================ */
+
+:root {
+  --bg0: #1a120b;
+  --bg1: #2b1d10;
+  --amber: #ffb84d;
+  --amber-dim: #c98a3d;
+  --cream: #f5e6c8;
+  --red: #ff5a4d;
+  --green: #7dd87d;
+  --line: #4a3518;
+  --font: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(1100px 700px at 50% -10%, #3a2a16, var(--bg0) 62%);
+  font-family: var(--font);
+  color: var(--cream);
+  padding: 24px;
+}
+
+/* ---------- 机壳 ---------- */
+.radio {
+  width: min(880px, 100%);
+  background: linear-gradient(160deg, #3d2c18, #241708 72%);
+  border-radius: 28px;
+  border: 1px solid #5c4424;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 220, 150, .18);
+  padding: 28px 32px 20px;
+}
+
+/* ---------- 头部 ---------- */
+.radio__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand__dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 10px var(--red);
+  animation: blink 1.6s steps(2) infinite;
+}
+.brand h1 { font-size: 22px; letter-spacing: 2px; font-weight: 700; }
+.brand h1 small {
+  display: block; font-size: 10px; letter-spacing: 4px;
+  color: var(--amber-dim); font-weight: 400; margin-top: 2px;
+}
+
+.clock { text-align: right; }
+.clock__time {
+  font-size: 40px; line-height: 1.1;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--amber);
+  letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 18px rgba(255, 184, 77, .35);
+}
+.clock__date { display: block; font-size: 12px; color: #b99a6b; margin-top: 4px; }
+
+/* ---------- 调谐盘 ---------- */
+.dial { margin: 20px 0 6px; }
+.dial__track {
+  position: relative; height: 38px;
+  border-radius: 10px;
+  background: #1f140a;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.dial__scale {
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(90deg, transparent 0 calc(5% - 2px), #6b4c22 0 5%);
+  opacity: .8;
+}
+.dial__needle {
+  position: absolute; top: 0; bottom: 0; left: 0%;
+  width: 3px; margin-left: -1.5px;
+  background: var(--red);
+  box-shadow: 0 0 8px rgba(255, 90, 77, .8);
+  transition: left .6s linear;
+}
+.dial__needle::after {
+  content: '';
+  position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--red);
+}
+.dial__readout {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-top: 8px; font-size: 13px; letter-spacing: 1px;
+}
+.dial__freq { font-family: Georgia, serif; color: var(--amber); font-size: 17px; }
+.dial__status { color: #b99a6b; }
+.dial__status.live { color: var(--red); animation: blink 1s steps(2) infinite; }
+
+/* ---------- 喇叭区 ---------- */
+.speaker { margin-top: 14px; }
+
+.eq {
+  display: flex; gap: 6px; height: 46px;
+  align-items: flex-end; justify-content: center;
+  margin-bottom: 10px;
+}
+.eq span {
+  width: 10px; height: 6px; border-radius: 4px;
+  background: var(--green); opacity: .22;
+  transition: opacity .3s;
+}
+.eq.on span { opacity: 1; animation: eq 0.8s ease-in-out infinite alternate; }
+.eq.on span:nth-child(1) { animation-delay: 0s; }
+.eq.on span:nth-child(2) { animation-delay: .15s; }
+.eq.on span:nth-child(3) { animation-delay: .3s; }
+.eq.on span:nth-child(4) { animation-delay: .1s; }
+.eq.on span:nth-child(5) { animation-delay: .25s; }
+
+.speaker__grille {
+  height: 96px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background-color: #120b05;
+  background-image: radial-gradient(circle, #241708 3px, transparent 4px);
+  background-size: 14px 14px;
+  box-shadow: inset 0 4px 14px rgba(0, 0, 0, .6);
+}
+
+/* ---------- 字幕区 ---------- */
+.stage {
+  margin: 16px 0;
+  padding: 16px 20px;
+  min-height: 112px;
+  background: rgba(0, 0, 0, .25);
+  border-radius: 14px;
+  border: 1px solid #3d2c14;
+  display: flex; flex-direction: column; justify-content: center; gap: 8px;
+}
+.stage__subtitle { font-size: 17px; line-height: 1.9; }
+.stage__state { font-size: 13px; color: var(--amber-dim); min-height: 18px; }
+
+/* ---------- 控制区 ---------- */
+.controls { display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.row--meta { justify-content: space-between; }
+.meta { font-size: 13px; color: #b99a6b; }
+
+.btn {
+  padding: 9px 18px; border-radius: 999px;
+  border: 1px solid #5c4424;
+  background: #33210f; color: var(--cream);
+  font-family: var(--font); font-size: 14px; cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.btn:hover { border-color: var(--amber); }
+.btn--primary {
+  background: linear-gradient(180deg, #e89a3c, #c9791f);
+  color: #221303; font-weight: 600; border: none;
+}
+.btn--primary:hover { filter: brightness(1.1); }
+.btn--ghost { background: transparent; }
+
+.time-picker {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid #5c4424;
+  background: #1c120a; color: var(--cream);
+  font-family: var(--font); font-size: 15px;
+}
+
+.switch input { display: none; }
+.switch__track {
+  display: inline-block; width: 52px; height: 28px;
+  border-radius: 999px;
+  background: #3a2a14; border: 1px solid #5c4424;
+  position: relative; cursor: pointer;
+  transition: background .2s;
+}
+.switch__track::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #b99a6b; transition: all .2s;
+}
+.switch input:checked + .switch__track { background: #5f8434; }
+.switch input:checked + .switch__track::after { left: 26px; background: #eaffd0; }
+
+/* ---------- 设置面板 ---------- */
+.panel {
+  margin-top: 18px; padding: 18px 20px;
+  background: rgba(0, 0, 0, .3);
+  border-radius: 14px; border: 1px solid #3d2c14;
+  animation: fadein .25s ease;
+}
+.panel h2 { font-size: 16px; color: var(--amber); margin-bottom: 12px; }
+.panel fieldset {
+  border: 1px dashed var(--line); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 12px;
+}
+.panel fieldset:last-of-type { margin-bottom: 0; }
+.panel legend { font-size: 13px; color: var(--amber-dim); padding: 0 6px; }
+.panel label { display: block; font-size: 13px; color: #cbb48a; margin-bottom: 10px; }
+.panel input[type="text"],
+.panel input[type="password"],
+.panel select {
+  display: block; width: 100%; margin-top: 4px;
+  padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #1c120a; color: var(--cream);
+  font-family: var(--font); font-size: 13px;
+}
+.panel .btn { margin-top: 4px; }
+.voice-info { font-size: 13px; color: #cbb48a; margin-bottom: 10px; line-height: 1.7; }
+.chk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #cbb48a; margin-bottom: 10px; }
+.chk input[type="range"] { flex: 1; max-width: 220px; accent-color: var(--amber); }
+
+.emotions { display: flex; gap: 10px; flex-wrap: wrap; }
+.emotion {
+  flex: 1; min-width: 150px;
+  padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #241708; color: var(--cream);
+  font-family: var(--font); text-align: left; cursor: pointer;
+  transition: all .2s;
+}
+.emotion:hover { border-color: var(--amber-dim); }
+.emotion.is-active {
+  border-color: var(--amber);
+  background: #3a2812;
+  box-shadow: 0 0 0 1px var(--amber);
+}
+.emotion b { display: block; font-size: 14px; }
+.emotion small { display: block; font-size: 11px; color: #b99a6b; margin-top: 2px; }
+
+/* ---------- 底部 ---------- */
+.radio__footer {
+  margin-top: 16px; padding-top: 12px;
+  border-top: 1px solid #33220f;
+  font-size: 11px; color: #8a6f47; text-align: center; line-height: 1.7;
+}
+
+/* ---------- 动画 ---------- */
+@keyframes blink { 50% { opacity: .25; } }
+@keyframes eq { from { height: 6px; } to { height: 44px; } }
+@keyframes fadein { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* ---------- 顶部字幕横幅(播报时逐段浮现) ---------- */
+.caption-bar {
+  position: relative;
+  margin: -8px -8px 14px;
+  padding: 12px 24px 14px;
+  border-radius: 0 0 16px 16px;
+  background: linear-gradient(180deg, rgba(44, 28, 12, .85), rgba(26, 16, 6, .5));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 184, 77, .22);
+  border-top: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  animation: fadein .3s ease;
+}
+.caption-tag {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; letter-spacing: 3px; color: var(--amber);
+  margin-bottom: 6px; font-weight: 500;
+}
+.caption-tag i {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red);
+  animation: blink 1s steps(2) infinite;
+}
+.caption-lines { min-height: 30px; }
+.caption-line {
+  font-size: 26px; line-height: 1.55;
+  font-weight: 500; letter-spacing: 1px;
+  background: linear-gradient(180deg, #ffffff 35%, #ffd98a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 1px 6px rgba(255, 184, 77, .35));
+  opacity: 0; transform: translateY(14px);
+  transition: opacity .6s ease, transform .6s ease;
+}
+.caption-line.on { opacity: 1; transform: none; }
+
+/* ---------- 定时时间列表（chips） ---------- */
+.alarm-box {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #3d2c14;
+  background: rgba(0, 0, 0, .22);
+  display: flex; flex-direction: column; gap: 10px;
+  margin-bottom: 12px;
+}
+.alarm-box__title {
+  font-size: 13px; color: var(--amber-dim); letter-spacing: 1px;
+}
+.alarm-box .meta { margin-left: auto; }
+.alarm-add { display: flex; gap: 10px; align-items: center; }
+.alarm-add .time-picker { flex: 1; }
+.row--actions { justify-content: flex-end; }
+
+.alarm-times {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  min-height: 30px;
+}
+.alarm-empty { font-size: 12px; color: #8a6f47; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 6px 5px 14px;
+  border-radius: 999px;
+  border: 1px solid #5c4424;
+  background: #2b1d10;
+  color: var(--cream);
+  font-size: 13px; letter-spacing: 1px;
+  transition: border-color .2s;
+}
+.chip:hover { border-color: var(--amber-dim); }
+.chip b { font-weight: 500; font-family: Georgia, serif; color: var(--amber); font-size: 14px; }
+.chip-x {
+  border: none; background: transparent; color: #b99a6b;
+  font-size: 15px; line-height: 1; cursor: pointer; padding: 3px 5px;
+  border-radius: 50%;
+}
+.chip-x:hover { color: var(--red); background: rgba(255, 90, 77, .18); }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 560px) {
+  body { padding: 12px; }
+  .radio { padding: 20px 16px; border-radius: 20px; }
+  .clock__time { font-size: 30px; }
+  .brand h1 { font-size: 18px; }
+  .row { gap: 10px; }
+  .stage__subtitle { font-size: 15px; }
+  .caption-line { font-size: 20px; }
+}

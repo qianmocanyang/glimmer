@@ -1,0 +1,51 @@
+{
+  "name": "glimmer-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "祝您明天拥有一个好心情！",
+  "main": "main.js",
+  "author": "Goutao",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "dist:portable": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "xyz.goutao.morningradio",
+    "productName": "Glimmer",
+    "electronDist": "node_modules/electron/dist",
+    "files": [
+      "main.js",
+      "preload.js",
+      "compact.html",
+      "compact.css",
+      "lyrics.html",
+      "build/icon.png",
+      "js/**/*",
+      "1.mp3",
+      "2.mp3",
+      "3.mp3",
+      "icons/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "曦语"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "曦语 Glimmer",
+  "short_name": "曦语",
+  "description": "有艺术感的 AI 清晨电台：设定定时，到点由 AI 生成激励语并用情感语音朗读",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1a120b",
+  "theme_color": "#1a120b",
+  "icons": [
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
