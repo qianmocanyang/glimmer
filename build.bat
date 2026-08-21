@@ -51,8 +51,8 @@ echo.
 echo Output files:
 dir /b release\*.exe 2>nul
 echo.
-echo   - Installer:  release\MorningRadio Setup 1.0.0.exe
-echo   - Portable:   release\MorningRadio 1.0.0.exe
+echo   - Installer:  release\Glimmer Setup 1.1.0.exe
+echo   - Portable:   release\Glimmer 1.1.0.exe
 echo.
 echo Tips:
 echo   - If electron download is slow, set mirror first:
