@@ -135,32 +135,68 @@ html, body {
 .switch input:checked + .switch-track { background: #5f8434; border-color: #7fa64e; }
 .switch input:checked + .switch-track::after { left: 22px; background: #eaffd0; }
 
-/* chips */
-.chips { display: flex; gap: 6px; flex-wrap: wrap; min-height: 26px; }
-.alarm-empty { font-size: 11px; color: #8a6f47; padding: 4px 0; }
-.chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 6px 4px 12px; border-radius: 999px;
-  border: 1px solid #5c4424; background: #2b1d10;
-  font-size: 12px; letter-spacing: 1px;
-  transition: transform .2s, border-color .2s;
+/* 定时时段列表（电台节目单卡片） */
+.alarm-list { display: flex; flex-direction: column; gap: 8px; }
+.alarm-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px 10px 16px; border-radius: 12px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 184, 77, .07), rgba(255, 184, 77, 0));
+  transition: border-color .2s, transform .2s, box-shadow .2s;
   animation: chipIn .35s ease;
 }
-.chip:hover { transform: translateY(-1px); border-color: var(--amber-dim); }
-.chip b { font-weight: 500; font-family: Georgia, serif; color: var(--amber); }
-.chip-x {
-  border: none; background: transparent; color: #b99a6b;
-  font-size: 13px; line-height: 1; cursor: pointer; padding: 2px 5px; border-radius: 50%;
+.alarm-item:hover {
+  border-color: var(--amber-dim);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
 }
-.chip-x:hover { color: var(--red); background: rgba(255, 90, 77, .18); }
+.alarm-item-time {
+  display: flex; align-items: center; gap: 10px;
+  font-family: Georgia, serif;
+}
+.alarm-item-time i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--amber); box-shadow: 0 0 6px var(--amber);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+.alarm-item-time b {
+  font-size: 21px; font-weight: 500; letter-spacing: 2px;
+  color: var(--cream);
+  background: linear-gradient(180deg, #fff 30%, #ffd98a 100%);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 1px 4px rgba(255, 184, 77, .25));
+  font-variant-numeric: tabular-nums;
+}
+.alarm-item .chip-x { font-size: 14px; }
+.alarm-empty {
+  font-size: 12px; color: #8a6f47; padding: 9px 2px; text-align: center;
+  border: 1px dashed var(--line); border-radius: 10px;
+}
 
 /* 添加行 */
 .add-row { display: flex; gap: 8px; align-items: center; }
 .time-picker {
-  flex: 1; padding: 6px 10px; border-radius: 999px;
+  flex: 1; padding: 8px 12px; border-radius: 999px;
   border: 1px solid var(--line); background: #1c120a; color: var(--cream);
-  font-family: var(--font); font-size: 13px;
+  font-family: var(--font); font-size: 14px;
 }
+.time-picker::-webkit-calendar-picker-indicator {
+  filter: invert(.72) sepia(.65) saturate(3) hue-rotate(-18deg);
+  cursor: pointer;
+}
+.btn-add {
+  padding: 9px 16px; border-radius: 999px;
+  border: 1px solid rgba(255, 184, 77, .45);
+  background: linear-gradient(180deg, #e89a3c, #c9791f);
+  color: #221303; font-weight: 600; letter-spacing: 1px;
+  box-shadow: 0 4px 12px rgba(255, 154, 60, .28);
+  transition: transform .2s, box-shadow .2s;
+}
+.btn-add:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(255, 154, 60, .45);
+}
+/* 通用按钮（设置面板内：试听音色等） */
 .btn {
   padding: 7px 14px; border-radius: 999px;
   border: 1px solid #5c4424; background: #33210f; color: var(--cream);
@@ -169,6 +205,12 @@ html, body {
 }
 .btn:hover { transform: translateY(-1px); border-color: var(--amber); }
 .btn.block { width: 100%; margin-top: 6px; }
+/* 删除按钮（chip-x 通用：定时项 + 其他 chip） */
+.chip-x {
+  border: none; background: transparent; color: #b99a6b;
+  font-size: 13px; line-height: 1; cursor: pointer; padding: 2px 5px; border-radius: 50%;
+}
+.chip-x:hover { color: var(--red); background: rgba(255, 90, 77, .18); }
 
 /* ---------- 主操作(圆形按钮) ---------- */
 .actions {

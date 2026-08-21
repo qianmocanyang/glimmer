@@ -32,6 +32,19 @@
     Sounds.stopPlayback();
   }
 
+  /* 暂停 / 继续播报（AudioContext suspend/resume，人声 + BGM 一起暂停） */
+  function pause() {
+    Sounds.pause();
+  }
+
+  function resume() {
+    Sounds.resume();
+  }
+
+  function isPaused() {
+    return Sounds.isPaused();
+  }
+
   /* 重置引擎失败状态（设置变更后允许重试）。
    * 当前实现无内部失败计数，保留空实现以兼容 app.js 的调用。 */
   function resetFailures() { /* no-op */ }
@@ -39,6 +52,9 @@
   global.TTS = {
     speak: speak,
     stop: stop,
+    pause: pause,
+    resume: resume,
+    isPaused: isPaused,
     resetFailures: resetFailures,
   };
 })(window);

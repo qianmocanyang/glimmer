@@ -14,6 +14,7 @@
   let bgmSource = null;
   let bgmGain = null;
   let bgmCache = {};   // 解码缓存 { url: AudioBuffer }，避免每次播报重新下载/解码
+  let paused = false;  // 播报暂停状态（AudioContext suspend）
 
   /* 背景音乐曲库（每次播报随机选一首）+ 固定音量（已取消用户自定义） */
   const BGM_LIST = ['1.mp3', '2.mp3', '3.mp3'];
@@ -21,7 +22,8 @@
 
   function ensure() {
     if (ctx) {
-      if (ctx.state === 'suspended') {
+      // 暂停状态下不要自动恢复（否则 pause() 会被意外打断）
+      if (ctx.state === 'suspended' && !paused) {
         try { ctx.resume(); } catch (e) { /* 忽略 */ }
       }
       return ctx;
@@ -118,6 +120,31 @@
       try { currentSource.stop(); } catch (e) { /* 忽略 */ }
       currentSource = null;
     }
+    paused = false;
+    const ac = ensure();
+    if (ac && ac.state === 'suspended') { try { ac.resume(); } catch (e) { /* 忽略 */ } }
+  }
+
+  /* 暂停播报：挂起整个 AudioContext（人声 + BGM 一起暂停） */
+  function pause() {
+    const ac = ensure();
+    if (ac && ac.state === 'running' && currentSource) {
+      try { ac.suspend(); } catch (e) { /* 忽略 */ }
+    }
+    paused = true;
+  }
+
+  /* 继续播报：恢复 AudioContext */
+  function resume() {
+    const ac = ensure();
+    if (ac && ac.state === 'suspended') {
+      try { ac.resume(); } catch (e) { /* 忽略 */ }
+    }
+    paused = false;
+  }
+
+  function isPaused() {
+    return paused;
   }
 
   /**
@@ -174,6 +201,9 @@
     prepareBuffer: prepareBuffer,
     playBuffer: playBuffer,
     stopPlayback: stopPlayback,
+    pause: pause,
+    resume: resume,
+    isPaused: isPaused,
     playBgm: playBgm,
     stopBgm: stopBgm,
   };

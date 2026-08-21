@@ -60,16 +60,17 @@
       <span class="card-title">定时播报</span>
       <span id="nextFire" class="meta">闹钟未开启</span>
     </div>
-    <div id="alarmTimes" class="chips" title="定时时间列表（点击 × 删除）"></div>
+    <div id="alarmTimes" class="alarm-list" title="定时时间列表（点击 ✕ 删除）"></div>
     <div class="add-row">
       <input type="time" id="alarmTime" class="time-picker" value="07:30">
-      <button id="addTimeBtn" class="btn">+ 添加</button>
+      <button id="addTimeBtn" class="btn btn-add">＋ 添加时段</button>
     </div>
   </section>
 
   <!-- 主操作按钮(圆形) -->
   <section class="actions">
     <button id="previewBtn" class="circle c-primary" title="试听">▶</button>
+    <button id="pauseBtn" class="circle" title="暂停播放" hidden>⏸</button>
     <button id="stopBtn" class="circle" title="停止">■</button>
     <button id="settingsBtn" class="circle" title="设置">⚙</button>
   </section>

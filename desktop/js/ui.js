@@ -14,13 +14,20 @@
   let onUserChange = null;
   let onPreview = null;
   let onStop = null;
+  let onTogglePause = null;
   let persistentHint = ''; // 跨状态保留的提示（如“引擎降级”），下一次会话开始时清除
+
+  /* 字幕逐句调度状态（支持暂停/继续） */
+  let captionTimer = null;
+  let captionSegs = [];
+  let captionIdx = -1;
 
   const STATES = {
     idle:       { status: '待机 STANDBY', eq: false, live: false, hint: '' },
     generating: { status: '生成中 ON AIR', eq: true,  live: true,  hint: '正在为你生成今日激励语…' },
     speaking:   { status: '播音中 LIVE',   eq: true,  live: true,  hint: '' },
-    done:       { status: '播报完毕',       eq: false, live: false, hint: '早安，新的一天加油！' },
+    paused:     { status: '已暂停 PAUSED', eq: false, live: false, hint: '播报已暂停，点击 ▶ 继续' },
+    done:       { status: '播报完毕',       eq: false, live: false, hint: '祝您明天拥有一个好心情！' },
     error:      { status: '信号异常',       eq: false, live: false, hint: '语音播放失败，请重试' },
   };
 
@@ -28,6 +35,7 @@
     onUserChange = hooks.onChange;
     onPreview = hooks.onPreview;
     onStop = hooks.onStop;
+    onTogglePause = hooks.onTogglePause;
 
     els.time = $('clockTime');
     els.date = $('clockDate');
@@ -43,6 +51,7 @@
     els.addTimeBtn = $('addTimeBtn');
     els.previewBtn = $('previewBtn');
     els.stopBtn = $('stopBtn');
+    els.pauseBtn = $('pauseBtn');
     els.nextFire = $('nextFire');
     els.settingsBtn = $('settingsBtn');
     els.panel = $('panel');
@@ -90,6 +99,9 @@
     });
     els.previewBtn.addEventListener('click', function () { onPreview && onPreview(); });
     els.stopBtn.addEventListener('click', function () { onStop && onStop(); });
+    if (els.pauseBtn) {
+      els.pauseBtn.addEventListener('click', function () { onTogglePause && onTogglePause(); });
+    }
     els.settingsBtn.addEventListener('click', function () {
       els.panel.hidden = !els.panel.hidden;
     });
@@ -124,30 +136,32 @@
     setTimeout(function () { btn.textContent = old; }, 1200);
   }
 
-  /* 定时时间列表（chips，可删除） */
+  /* 定时时间列表（电台节目单卡片，可删除） */
   function renderAlarmTimes(times) {
     if (!els.alarmTimes) return;
     els.alarmTimes.innerHTML = '';
     const list = Array.isArray(times) ? times : [];
     if (!list.length) {
-      const empty = document.createElement('span');
+      const empty = document.createElement('div');
       empty.className = 'alarm-empty';
-      empty.textContent = '未设置定时，请在下方面板添加';
+      empty.textContent = '还没有定时时段，添加一个吧';
       els.alarmTimes.appendChild(empty);
       return;
     }
     list.forEach(function (t) {
-      const chip = document.createElement('span');
-      chip.className = 'chip';
-      chip.innerHTML = '<b>' + t + '</b><button type="button" class="chip-x" data-t="' + t + '" title="删除">×</button>';
-      els.alarmTimes.appendChild(chip);
+      const item = document.createElement('div');
+      item.className = 'alarm-item';
+      item.innerHTML =
+        '<span class="alarm-item-time"><i></i><b>' + t + '</b></span>' +
+        '<button type="button" class="chip-x" data-t="' + t + '" title="删除该时段">✕</button>';
+      els.alarmTimes.appendChild(item);
     });
   }
 
-  /* 从当前界面 chips 读取时间列表（不依赖外部 settings 引用，避免旧数据） */
+  /* 从当前界面列表读取时间列表（不依赖外部 settings 引用，避免旧数据） */
   function currentTimes() {
     const out = [];
-    els.alarmTimes.querySelectorAll('.chip b').forEach(function (b) {
+    els.alarmTimes.querySelectorAll('.alarm-item-time b').forEach(function (b) {
       const t = b.textContent;
       if (t && out.indexOf(t) < 0) out.push(t);
     });
@@ -195,6 +209,16 @@
     const hint = s.hint || persistentHint;
     els.stageState.textContent = hint;
     els.stageState.classList.toggle('is-visible', !!hint);
+    // 暂停/继续按钮：仅播音中与已暂停状态显示，其余隐藏
+    if (els.pauseBtn) {
+      if (state === 'speaking' || state === 'paused') {
+        els.pauseBtn.hidden = false;
+        els.pauseBtn.textContent = state === 'paused' ? '▶' : '⏸';
+        els.pauseBtn.title = state === 'paused' ? '继续播放' : '暂停播放';
+      } else {
+        els.pauseBtn.hidden = true;
+      }
+    }
   }
 
   function showSubtitle(text) {
@@ -212,7 +236,7 @@
     els.nextFire.textContent = text;
   }
 
-  /* 顶部字幕横幅：按句切段，逐段浮现。
+  /* 顶部字幕横幅：按句切段，逐段浮现（支持暂停/继续）。
    * duration(秒) 由语音层在音频就绪后传入：每段间隔 = 段字数占比 × 语音时长 × 0.95
    * （字幕略快于语音，避免"语音已说、字幕未到"的落后感）
    * 桌面版：同时推送给屏幕上的桌面歌词悬浮窗（类似音乐播放器桌面歌词） */
@@ -220,28 +244,73 @@
     if (!els.captionBar || !text) return;
     els.captionLines.innerHTML = '';
     els.captionBar.hidden = false;
-    const segs = String(text).split(/(?<=[。！？!?；;…])/);
+    if (captionTimer) { clearTimeout(captionTimer); captionTimer = null; }
     const total = String(text).length;
-    let delay = 0;
-    segs.forEach(function (s) {
-      const t = s.trim();
-      if (!t) return;
+    captionSegs = String(text).split(/(?<=[。！？!?；;…])/).map(function (s) { return s.trim(); }).filter(Boolean);
+    captionIdx = -1;
+
+    function appendLine(t, immediate) {
       const d = document.createElement('div');
-      d.className = 'caption-line';
+      d.className = 'caption-line' + (immediate ? ' on' : '');
       d.textContent = t;
       els.captionLines.appendChild(d);
-      (function (el, t0) {
-        setTimeout(function () { el.classList.add('on'); }, t0);
-      })(d, delay);
-      delay += duration ? (t.length / total) * duration * 1000 * 0.95 : 1100;
-    });
+      if (!immediate) {
+        (function (el) { setTimeout(function () { el.classList.add('on'); }, 20); })(d);
+      }
+      return d;
+    }
+
+    function step() {
+      captionIdx++;
+      if (captionIdx >= captionSegs.length) { captionTimer = null; return; }
+      const t = captionSegs[captionIdx];
+      appendLine(t, false);
+      const ms = duration ? (t.length / total) * duration * 1000 * 0.95 : 1100;
+      captionTimer = setTimeout(step, ms);
+    }
+    captionTimer = setTimeout(step, 100);
+
     // 桌面歌词悬浮窗同步
     if (global.radioDesktop && global.radioDesktop.sendLyric) {
       global.radioDesktop.sendLyric({ mode: 'caption', text: String(text), duration: duration || 0 });
     }
   }
 
+  /* 暂停字幕（语音暂停时调用，清除未触发的字幕定时器） */
+  function pauseCaption() {
+    if (captionTimer) { clearTimeout(captionTimer); captionTimer = null; }
+  }
+
+  /* 继续字幕：从下一句接着浮现（恢复后的句子直接显示，后续句按 1.1s 间隔续走） */
+  function resumeCaption() {
+    if (!captionSegs.length || captionTimer) return;
+    captionIdx++;
+    if (captionIdx >= captionSegs.length) { captionTimer = null; return; }
+    const t = captionSegs[captionIdx];
+    const d = document.createElement('div');
+    d.className = 'caption-line on';
+    d.textContent = t;
+    els.captionLines.appendChild(d);
+    captionTimer = setTimeout(function () {
+      function step() {
+        captionIdx++;
+        if (captionIdx >= captionSegs.length) { captionTimer = null; return; }
+        const s = captionSegs[captionIdx];
+        const el = document.createElement('div');
+        el.className = 'caption-line';
+        el.textContent = s;
+        els.captionLines.appendChild(el);
+        (function (node) { setTimeout(function () { node.classList.add('on'); }, 20); })(el);
+        captionTimer = setTimeout(step, 1100);
+      }
+      step();
+    }, 600);
+  }
+
   function hideCaption() {
+    if (captionTimer) { clearTimeout(captionTimer); captionTimer = null; }
+    captionSegs = [];
+    captionIdx = -1;
     if (els.captionBar) {
       els.captionBar.hidden = true;
       els.captionLines.innerHTML = '';
@@ -282,6 +351,8 @@
     setLaunchUI: setLaunchUI,
     showCaption: showCaption,
     hideCaption: hideCaption,
+    pauseCaption: pauseCaption,
+    resumeCaption: resumeCaption,
     renderAlarmTimes: renderAlarmTimes,
   };
 })(window);

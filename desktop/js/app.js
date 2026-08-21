@@ -11,6 +11,7 @@
 
   let settings = Config.loadSettings();
   let sessionRunning = false;
+  let sessionPaused = false;
 
   const alarm = new AlarmClock(onAlarmFire);
 
@@ -100,6 +101,7 @@
         UI.hideCaption();
         UI.setState('done');
         sessionRunning = false;
+        sessionPaused = false;
       },
       onerror: function (e) {
         console.warn('[tts] 朗读失败：', e);
@@ -107,6 +109,7 @@
         UI.hideCaption();
         UI.setState('error');
         sessionRunning = false;
+        sessionPaused = false;
       },
     });
   }
@@ -116,9 +119,26 @@
     Sounds.stopBgm();
     UI.hideCaption();
     sessionRunning = false;
+    sessionPaused = false;
     UI.setState('idle');
     UI.showHint('');
     UI.showSubtitle('设定闹钟时间，到点后电台会为你送上 AI 激励语 ☀');
+  }
+
+  /* 暂停 / 继续播报（仅播音中与已暂停状态有效） */
+  function togglePause() {
+    if (!sessionRunning) return;
+    if (sessionPaused) {
+      TTS.resume();
+      UI.resumeCaption();
+      sessionPaused = false;
+      UI.setState('speaking');
+    } else {
+      TTS.pause();
+      UI.pauseCaption();
+      sessionPaused = true;
+      UI.setState('paused');
+    }
   }
 
   /* ---------- 启动 ---------- */
@@ -152,6 +172,7 @@
       onChange: onUserChange,
       onPreview: runSession,
       onStop: stopSession,
+      onTogglePause: togglePause,
     });
 
     // 闹钟装配

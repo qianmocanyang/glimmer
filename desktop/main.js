@@ -16,6 +16,7 @@
 
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen } = require('electron');
 const path = require('path');
+const { execFile } = require('child_process');
 
 /* 网页资源根目录：开发模式在 desktop/ 上一级；打包后 main.js 与 index.html 同处 app 包根 */
 const WEB_ROOT = app.isPackaged ? __dirname : path.join(__dirname, '..');
@@ -42,6 +43,41 @@ let tray = null;
 let lyricWin = null;   // 桌面歌词悬浮窗
 let quitting = false;
 let bootPlayTimer = null;
+
+/* ---------- 桌面层挂载（koffi 调 user32） ----------
+ * 时钟模式：SetParent 到桌面 Progman，让歌词窗像壁纸一样固定在桌面层，
+ * 任何应用窗口都不会覆盖它；播报歌词时解除挂载并置顶悬浮。 */
+let _findW = null;
+let _setP = null;
+try {
+  const koffi = require('koffi');
+  const user32 = koffi.load('user32.dll');
+  _findW = user32.func('void* __stdcall FindWindowW(const char16_t* cls, const char16_t* name)');
+  _setP = user32.func('void* __stdcall SetParent(void* child, void* parent)');
+} catch (e) {
+  console.warn('[lyric] 桌面层挂载不可用（koffi 加载失败），时钟将使用普通窗口层级', e && e.message);
+}
+
+/* 将歌词窗挂到桌面层（壁纸之上、应用窗口之下） */
+function attachToDesktop(win) {
+  if (!_findW || !_setP || !win || win.isDestroyed()) return false;
+  try {
+    const progman = _findW('Progman', null);
+    if (!progman) return false;
+    _setP(win.getNativeWindowHandle(), progman);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/* 解除桌面层挂载（恢复普通顶层窗口） */
+function detachFromDesktop(win) {
+  if (!_setP || !win || win.isDestroyed()) return;
+  try {
+    _setP(win.getNativeWindowHandle(), null);
+  } catch (e) { /* 忽略 */ }
+}
 
 /* 32x32 琥珀色圆点图标（BGRA 原始像素生成，避免外部图标文件） */
 function makeIcon(size) {
@@ -72,22 +108,66 @@ function showWindow() {
   win.focus();
 }
 
-/* ---------- 开机自启动 IPC（渲染进程经 preload 调用） ---------- */
-ipcMain.handle('radio:get-launch', function () {
+/* ---------- 开机自启动 IPC（渲染进程经 preload 调用） ----------
+ * 双保险：
+ *  ① app.setLoginItemSettings()（官方 API，NSIS 安装版可靠）
+ *  ② 手动写 HKCU\...\Run 注册表（便携版等官方 API 失效时的兜底）
+ * 启动参数 --hidden：开机自启静默模式（不弹窗驻托盘 + 延时播报） */
+const RUN_KEY = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
+const RUN_NAME = 'Glimmer';
+
+function ps(script) {
+  return new Promise(function (resolve) {
+    execFile('powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', script],
+      { windowsHide: true },
+      function (err, stdout) {
+        resolve({ err: err, out: (stdout || '').trim() });
+      });
+  });
+}
+
+async function setRunAtLogin(enabled) {
+  const exe = process.execPath;
+  if (!app.isPackaged || !exe) return false;
+  const esc = exe.replace(/'/g, "''");
+  const cmd = enabled
+    ? "Set-ItemProperty -Path '" + RUN_KEY + "' -Name '" + RUN_NAME + "' -Value '\"" + esc + "\" --hidden' -Force"
+    : "Remove-ItemProperty -Path '" + RUN_KEY + "' -Name '" + RUN_NAME + "' -ErrorAction SilentlyContinue";
+  const r = await ps(cmd);
+  return !r.err;
+}
+
+async function getRunAtLogin() {
+  const r = await ps("(Get-ItemProperty -Path '" + RUN_KEY + "' -Name '" + RUN_NAME + "' -ErrorAction SilentlyContinue).'" + RUN_NAME + "'");
+  return !!r.out;
+}
+
+ipcMain.handle('radio:get-launch', async function () {
   try {
-    const s = app.getLoginItemSettings();
-    return { openAtLogin: !!s.openAtLogin, openedAtLogin: !!s.wasOpenedAtLogin };
+    let official = false;
+    try { official = !!app.getLoginItemSettings().openAtLogin; } catch (e) { /* 忽略 */ }
+    let regOn = false;
+    try { regOn = await getRunAtLogin(); } catch (e) { /* 忽略 */ }
+    let openedAtLogin = false;
+    try {
+      openedAtLogin = !!app.getLoginItemSettings().wasOpenedAtLogin || process.argv.indexOf('--hidden') >= 0;
+    } catch (e) { openedAtLogin = process.argv.indexOf('--hidden') >= 0; }
+    return { openAtLogin: official || regOn, openedAtLogin: openedAtLogin };
   } catch (e) {
     return { openAtLogin: false, openedAtLogin: false };
   }
 });
 
-ipcMain.handle('radio:set-launch', function (evt, enabled) {
+ipcMain.handle('radio:set-launch', async function (evt, enabled) {
   try {
-    app.setLoginItemSettings({ openAtLogin: !!enabled, openAsHidden: true });
+    // ① 官方 API（openAsHidden 配合显式 --hidden 参数，兼容性最佳）
+    app.setLoginItemSettings({ openAtLogin: !!enabled, openAsHidden: true, args: ['--hidden'] });
+    // ② 注册表兜底（便携版等场景）
+    await setRunAtLogin(!!enabled);
     return true;
   } catch (e) {
-    return false;
+    try { await setRunAtLogin(!!enabled); return true; } catch (e2) { return false; }
   }
 });
 
@@ -199,7 +279,7 @@ function createLyricWindow() {
     lyricWin.loadFile(path.join(__dirname, 'lyrics.html'));
 
     // 页面加载完成 + 透明通道就绪后再做一次「hide→show」强制重置 layered，
-    // 解决「首次显示白底、播放后才透明」的问题
+    // 解决「首次显示白底、播放后才透明」的问题；随后挂到桌面层（时钟模式）
     lyricWin.webContents.once('did-finish-load', function () {
       try { lyricWin.setBackgroundColor('rgba(0,0,0,0)'); } catch (e) {}
       // hide+show 强制 Chromium 重建 WS_EX_LAYERED（关键修复）
@@ -210,6 +290,8 @@ function createLyricWindow() {
           lyricWin.hide();
           lyricWin.show();
         } catch (e) {}
+        // 时钟模式：锁死在桌面层（像壁纸一样，任何应用不覆盖）
+        attachToDesktop(lyricWin);
       }, 200);
     });
     lyricWin.on('closed', function () { lyricWin = null; });
@@ -219,12 +301,14 @@ function createLyricWindow() {
 }
 
 /* 渲染进程推送歌词/时钟 → 转发给歌词窗，并按模式切换层级：
- * 时钟模式不置顶（只显示在桌面），歌词模式置顶悬浮 */
+ * 时钟模式挂到桌面层（壁纸级，任何应用不覆盖）；歌词模式解除挂载并置顶悬浮 */
 ipcMain.on('radio:lyric', function (_evt, payload) {
   if (!lyricWin || lyricWin.isDestroyed()) return;
   if (payload && payload.mode === 'clock') {
+    attachToDesktop(lyricWin);
     lyricWin.setAlwaysOnTop(false);
   } else if (payload && payload.mode === 'caption') {
+    detachFromDesktop(lyricWin);
     lyricWin.setAlwaysOnTop(true, 'screen-saver');
   }
   lyricWin.webContents.send('lyric:data', payload);
@@ -239,9 +323,10 @@ if (!gotLock) {
 
   app.whenReady().then(function () {
     // 判断本次是否由开机自启拉起（不弹窗、不打扰）
-    let openedAtLogin = false;
+    // 注册表自启带 --hidden 参数；官方 API 自启用 wasOpenedAtLogin
+    let openedAtLogin = process.argv.indexOf('--hidden') >= 0;
     try {
-      openedAtLogin = !!(app.getLoginItemSettings().wasOpenedAtLogin);
+      openedAtLogin = openedAtLogin || !!(app.getLoginItemSettings().wasOpenedAtLogin);
     } catch (e) { /* 忽略 */ }
 
     createWindow(openedAtLogin);
